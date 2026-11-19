@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse — Mini Social Media Platform</title>
+  <link rel="stylesheet" href="/css/styles.css?v=7">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234f46e5'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#feed" class="logo-group" onclick="window.location.hash='feed'">
+        <div class="logo-badge">P</div>
+        <div class="logo-title">Pulse<span>.</span></div>
+      </a>
+      <div class="nav-right" id="user-menu-area">
+        <!-- Auth buttons or user profile info populated by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Layout -->
+  <main class="main-wrapper">
+    <!-- Left Navigation Sidebar -->
+    <aside class="left-sidebar">
+      <div class="sticky-column">
+        <nav class="sidebar-nav">
+          <button class="nav-item active" id="nav-feed-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Feed</span>
+          </button>
+          <button class="nav-item" id="nav-following-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>Following</span>
+          </button>
+          <button class="nav-item" id="nav-reels-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+            <span>Reels</span>
+            <span style="font-size:0.65rem; background:linear-gradient(135deg, #ef4444, #f59e0b); color:#fff; padding:0.1rem 0.45rem; border-radius:999px; font-weight:700; margin-left:auto;">HOT</span>
+          </button>
+          <button class="nav-item" id="nav-profile-btn" style="display:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>My Profile</span>
+          </button>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Center Content Column -->
+    <section class="center-content">
+      <!-- Feed Tab Switcher -->
+      <div class="feed-tabs" id="feed-tabs">
+        <button class="feed-tab-btn active" id="tab-all">All Posts</button>
+        <button class="feed-tab-btn" id="tab-following">Following</button>
+      </div>
+
+      <!-- Create Post Form Card -->
+      <div class="create-post-card" id="create-post-card" style="display:none;">
+        <div class="create-post-header">
+          <div id="create-post-avatar"></div>
+          <div style="flex:1;">
+            <textarea id="post-content" class="post-textarea" placeholder="What's happening? Share a thought, photo, or video..." rows="3" maxlength="1000"></textarea>
+            
+            <!-- Expandable Multi-Media Drawer -->
+            <div class="image-input-drawer" id="media-drawer">
+              <!-- Media Drawer Navigation Tabs -->
+              <div class="media-tabs-bar">
+                <button type="button" class="media-tab-btn active" id="tab-mode-photo" onclick="switchMediaMode('photo')">
+                  📷 Photo
+                </button>
+                <button type="button" class="media-tab-btn" id="tab-mode-video" onclick="switchMediaMode('video')">
+                  🎥 Video
+                </button>
+                <button type="button" class="media-tab-btn" id="tab-mode-upload" onclick="switchMediaMode('upload')">
+                  📁 Upload Device File
+                </button>
+              </div>
+
+              <!-- Mode 1: Photo URL -->
+              <div id="media-panel-photo">
+                <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.35rem; color:var(--text-main);">Photo URL</label>
+                <input type="text" id="post-photo-url" class="image-input-field" placeholder="https://images.unsplash.com/... or /uploads/...">
+                
+                <div class="sample-image-chips">
+                  <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Photo presets:</span>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('photo', 'code')">💻 Code</button>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('photo', 'design')">🎨 Design</button>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('photo', 'nature')">🌲 Nature</button>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('photo', 'coffee')">☕ Coffee</button>
+                </div>
+              </div>
+
+              <!-- Mode 2: Video URL or Embed -->
+              <div id="media-panel-video" style="display:none;">
+                <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.35rem; color:var(--text-main);">Video URL (Direct MP4 / WebM or YouTube / Vimeo link)</label>
+                <input type="text" id="post-video-url" class="image-input-field" placeholder="e.g. /samples/nature.mp4, https://.../video.mp4 or YouTube link">
+                
+                <div class="sample-image-chips">
+                  <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Video presets:</span>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('video', 'nature')">🌄 Nature Video (MP4)</button>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('video', 'blaze')">🎬 Cinema Demo (MP4)</button>
+                  <button type="button" class="chip-btn" onclick="pickSampleMedia('video', 'youtube')">▶️ YouTube Video</button>
+                </div>
+              </div>
+
+              <!-- Mode 3: Local File Upload -->
+              <div id="media-panel-upload" style="display:none;">
+                <label class="drop-upload-zone" id="file-drop-zone">
+                  <input type="file" id="media-file-input" accept="image/*,video/*,audio/*">
+                  <div style="font-size:1.8rem; margin-bottom:0.35rem;">📤</div>
+                  <div style="font-size:0.875rem; font-weight:600; color:var(--text-main);">Click or Drag & Drop Photo or Video</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Supports JPG, PNG, GIF, MP4, WebM (up to 50MB)</div>
+                </label>
+                <div id="upload-progress-text" style="display:none; font-size:0.8rem; color:var(--primary); margin-top:0.5rem; text-align:center; font-weight:600;">Uploading file...</div>
+              </div>
+
+              <!-- Live Media Preview Box -->
+              <div class="media-preview-container" id="media-preview-box" style="display:none;">
+                <span class="media-preview-overlay-info" id="media-preview-type">Media</span>
+                <div id="media-preview-content"></div>
+                <button type="button" class="image-preview-remove" id="remove-preview-btn" title="Remove media">&times;</button>
+              </div>
+            </div>
+
+            <div class="post-options">
+              <div class="post-options-left">
+                <!-- Action Buttons to open Photo, Video, Upload -->
+                <button type="button" class="icon-btn" id="btn-toggle-photo" title="Add Photo" onclick="openMediaDrawerWithMode('photo')">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  <span style="font-size:0.75rem; font-weight:600; margin-left:0.25rem;">Photo</span>
+                </button>
+
+                <button type="button" class="icon-btn" id="btn-toggle-video" title="Add Video" onclick="openMediaDrawerWithMode('video')">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                  <span style="font-size:0.75rem; font-weight:600; margin-left:0.25rem;">Video</span>
+                </button>
+
+                <button type="button" class="icon-btn" id="btn-toggle-upload" title="Upload from Device" onclick="openMediaDrawerWithMode('upload')">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span style="font-size:0.75rem; font-weight:600; margin-left:0.25rem;">Upload</span>
+                </button>
+
+                <span class="char-counter" id="char-count" style="margin-left:0.5rem;">0 / 1000</span>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" id="submit-post-btn">Post</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed Container -->
+      <div id="feed-container">
+        <div id="posts-list" class="post-list">
+          <!-- Posts rendered here -->
+        </div>
+      </div>
+
+      <!-- User Profile Container -->
+      <div id="profile-container" style="display:none;">
+        <!-- Profile header and user posts rendered here -->
+      </div>
+
+      <!-- Reels Container (Full-Screen / Snap-Scroll Mode) -->
+      <div id="reels-container" style="display:none;">
+        <div class="reels-header-row">
+          <div>
+            <h2 style="font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:0.4rem;">
+              <span>🔥</span> Reels & Shorts
+            </h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem;">Swipe or use ⬆️ ⬇️ to browse fullscreen reels</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="toggleFullscreenReels()" title="Toggle Fullscreen">
+              ⛶ Fullscreen
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openCreateReelModal()">
+              <span>➕</span> Create Reel
+            </button>
+          </div>
+        </div>
+
+        <div class="reels-wrapper-relative" id="reels-wrapper-relative">
+          <div id="reels-stream" class="reels-stream">
+            <!-- Reels rendered here dynamically -->
+          </div>
+
+          <!-- Floating Next-by-Next Navigation Buttons -->
+          <div class="reels-nav-arrows">
+            <button type="button" class="reel-nav-btn" onclick="scrollToPreviousReel()" title="Previous Reel (Up Arrow)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </button>
+            <button type="button" class="reel-nav-btn" onclick="scrollToNextReel()" title="Next Reel (Down Arrow)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+      <div class="sticky-column">
+        <!-- Logged-in User Profile Summary Widget -->
+        <div class="side-card" id="my-profile-widget" style="display:none;">
+          <div id="my-profile-widget-content"></div>
+        </div>
+
+        <!-- Demo Accounts Helper (Visible when logged out) -->
+        <div class="side-card" id="demo-accounts-card">
+          <div class="side-card-title">Demo Accounts</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Sample accounts (password: <code>password123</code>):</div>
+          <div>
+            <span class="demo-account-badge" onclick="fillDemoLogin('alex_tech')">👤 alex_tech</span>
+            <span class="demo-account-badge" onclick="fillDemoLogin('sarah_design')">👤 sarah_design</span>
+            <span class="demo-account-badge" onclick="fillDemoLogin('marcus_lens')">👤 marcus_lens</span>
+          </div>
+        </div>
+
+        <!-- Suggested Users to Follow -->
+        <div class="side-card">
+          <div class="side-card-title">Who to Follow</div>
+          <div id="suggested-users-list">
+            <!-- Suggested users dynamically loaded -->
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Auth Modal (Login / Register) -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="feed-tabs" style="margin-bottom:0; width:100%; border:none; padding:0; background:transparent;">
+          <button type="button" class="feed-tab-btn active" id="auth-tab-login">Log In</button>
+          <button type="button" class="feed-tab-btn" id="auth-tab-register">Sign Up</button>
+        </div>
+        <button type="button" class="modal-close-btn" id="auth-modal-close">&times;</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Username or Email</label>
+          <input type="text" id="login-identifier" class="form-input" placeholder="alex_tech or alex@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Log In</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="modal-body" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="register-username" class="form-input" placeholder="john_doe (alphanumeric)" pattern="^[a-zA-Z0-9_]{3,20}$" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="register-email" class="form-input" placeholder="john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="register-password" class="form-input" placeholder="Min 6 characters" minlength="6" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio (Optional)</label>
+          <textarea id="register-bio" class="form-textarea" placeholder="Tell the world about yourself..." rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avatar URL (Optional)</label>
+          <input type="url" id="register-avatar" class="form-input" placeholder="https://...">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal / Profile Settings -->
+  <div class="modal-overlay" id="edit-profile-modal">
+    <div class="modal-content" style="max-width:480px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Profile Settings</h2>
+        <button type="button" class="modal-close-btn" id="edit-profile-close">&times;</button>
+      </div>
+      <form id="edit-profile-form" novalidate>
+        <div class="modal-body">
+          <!-- Profile Photo Section -->
+          <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:1.25rem;">
+            <div id="edit-avatar-preview-wrapper" style="position:relative; margin-bottom:0.75rem;">
+              <div id="edit-avatar-preview" style="width:84px; height:84px; border-radius:50%; overflow:hidden; border:3px solid var(--primary-border); display:flex; align-items:center; justify-content:center; background:#e2e8f0;">
+                <!-- Avatar image rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Upload / Change Photo Action Buttons -->
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+              <input type="file" id="edit-avatar-file-input" accept="image/*" style="display:none;">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('edit-avatar-file-input').click()">
+                📷 Upload Photo
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="generateRandomAvatar()">
+                🎲 Random
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-avatar-url" onclick="toggleAvatarUrlInput()">
+                🌐 Paste URL
+              </button>
+            </div>
+            <div id="avatar-upload-status" style="font-size:0.75rem; color:var(--primary); margin-top:0.35rem; display:none; font-weight:600;">Uploading photo...</div>
+          </div>
+
+          <!-- Collapsible Avatar URL Input -->
+          <div class="form-group" id="avatar-url-drawer" style="display:none;">
+            <label class="form-label">Photo URL</label>
+            <input type="text" id="edit-avatar-input" class="form-input" placeholder="https://... or /uploads/...">
+          </div>
+
+          <!-- Bio Input -->
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.35rem;">
+              <label class="form-label" style="margin-bottom:0;">Bio</label>
+              <span id="edit-bio-count" style="font-size:0.75rem; color:var(--text-muted);">0 / 300</span>
+            </div>
+            <textarea id="edit-bio-input" class="form-textarea" placeholder="Tell everyone about yourself, your work, or hobbies..." rows="3" maxlength="300"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeEditProfileModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create Reel Modal -->
+  <div class="modal-overlay" id="create-reel-modal">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Create Reel 📱</h2>
+        <button type="button" class="modal-close-btn" id="create-reel-close">&times;</button>
+      </div>
+      <form id="create-reel-form" novalidate>
+        <div class="modal-body">
+          <!-- Video File Upload & URL -->
+          <div class="form-group">
+            <label class="form-label">Video Clip (MP4, WebM)</label>
+            <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+              <input type="file" id="reel-file-input" accept="video/*" style="display:none;">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('reel-file-input').click()">
+                📁 Upload Video from Device
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleReelUrlInput()">
+                🌐 Video URL
+              </button>
+            </div>
+            <div id="reel-upload-status" style="font-size:0.75rem; color:var(--primary); margin-bottom:0.5rem; display:none; font-weight:600;">Uploading video...</div>
+
+            <div id="reel-url-drawer" style="display:none; margin-bottom:0.5rem;">
+              <input type="text" id="reel-url-input" class="form-input" placeholder="e.g. /samples/flower.mp4, https://.../video.mp4">
+            </div>
+
+            <!-- Quick Reel Samples -->
+            <div class="sample-image-chips">
+              <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Presets:</span>
+              <button type="button" class="chip-btn" onclick="pickReelSample('flower')">🌸 Flower Timelapse</button>
+              <button type="button" class="chip-btn" onclick="pickReelSample('nature')">🌲 Green Nature</button>
+              <button type="button" class="chip-btn" onclick="pickReelSample('bunny')">🎬 Animation Reel</button>
+            </div>
+          </div>
+
+          <!-- Video Preview Box -->
+          <div id="reel-preview-container" style="display:none; margin-bottom:1rem; border-radius:var(--radius-md); overflow:hidden; background:#000; text-align:center;">
+            <video id="reel-preview-video" controls playsinline style="max-height:180px; width:100%; object-fit:contain;"></video>
+          </div>
+
+          <!-- Reel Caption -->
+          <div class="form-group">
+            <label class="form-label">Caption & Hashtags</label>
+            <textarea id="reel-caption-input" class="form-textarea" placeholder="Add an engaging caption... #reels #trending" rows="2" maxlength="500"></textarea>
+          </div>
+
+          <!-- Audio / Song Selection Section -->
+          <div class="form-group">
+            <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>🎵 Choose Song / Background Music</span>
+              <span id="selected-song-badge" style="font-size:0.75rem; color:var(--primary); font-weight:600;">Original Video Audio</span>
+            </label>
+            
+            <!-- Song Preset Chips -->
+            <div class="sample-image-chips" style="margin-bottom:0.6rem; flex-wrap:wrap;">
+              <button type="button" class="chip-btn song-chip-btn active" id="song-btn-original" onclick="selectReelSong('Original Video Audio', '')">
+                🎙️ Original Audio
+              </button>
+              <button type="button" class="chip-btn song-chip-btn" id="song-btn-synthwave" onclick="selectReelSong('⚡ SynthWave Sunset · Neon Dreams', '/audio/synthwave.mp3')">
+                ⚡ SynthWave
+              </button>
+              <button type="button" class="chip-btn song-chip-btn" id="song-btn-chillhop" onclick="selectReelSong('☕ Chill Lo-Fi Beats · Study Vibes', '/audio/chillhop.mp3')">
+                ☕ Chill Lo-Fi
+              </button>
+              <button type="button" class="chip-btn song-chip-btn" id="song-btn-energetic" onclick="selectReelSong('🔥 Upbeat Pop Groove · Pulse Hits', '/audio/energetic.mp3')">
+                🔥 Upbeat Pop
+              </button>
+              <button type="button" class="chip-btn song-chip-btn" id="song-btn-acoustic" onclick="selectReelSong('🎸 Acoustic Summer · Sunshine', '/audio/acoustic.mp3')">
+                🎸 Acoustic Summer
+              </button>
+            </div>
+
+            <!-- Upload Custom Song and Preview Audio controls -->
+            <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
+              <input type="file" id="reel-audio-file-input" accept="audio/*" style="display:none;">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('reel-audio-file-input').click()">
+                📁 Upload Custom Song (MP3)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="preview-song-btn" onclick="toggleReelSongModalPreview()" style="display:none;">
+                ▶ Listen to Song
+              </button>
+              <audio id="modal-song-preview-audio" preload="none"></audio>
+            </div>
+            <div id="reel-audio-upload-status" style="font-size:0.75rem; color:var(--primary); display:none; font-weight:600; margin-bottom:0.5rem;"></div>
+
+            <!-- Audio Title and Hidden URL Field -->
+            <input type="text" id="reel-audio-input" class="form-input" placeholder="Audio / Song Title" value="Original Video Audio">
+            <input type="hidden" id="reel-audio-url-input" value="">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeCreateReelModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="submit-reel-btn">Publish Reel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <button class="mobile-nav-item active" id="mobile-nav-feed-btn" onclick="window.location.hash='feed'">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>Feed</span>
+    </button>
+    <button class="mobile-nav-item" id="mobile-nav-following-btn" onclick="window.location.hash='following'">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      <span>Following</span>
+    </button>
+    <button class="mobile-nav-item" id="mobile-nav-reels-btn" onclick="window.location.hash='reels'">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+      <span>Reels</span>
+    </button>
+    <button class="mobile-nav-item" id="mobile-nav-profile-btn" onclick="navigateToMyProfile()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <!-- Floating Toast Notifications Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/api.js?v=7"></script>
+  <script src="/js/app.js?v=7"></script>
+</body>
+</html>
