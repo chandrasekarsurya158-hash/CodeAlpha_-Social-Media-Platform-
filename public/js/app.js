@@ -63,7 +63,6 @@ const DOM = {
   removePreviewBtn: document.getElementById('remove-preview-btn'),
 
   // Right Sidebar Widgets
-  demoAccountsCard: document.getElementById('demo-accounts-card'),
   myProfileWidget: document.getElementById('my-profile-widget'),
   myProfileWidgetContent: document.getElementById('my-profile-widget-content'),
   suggestedUsersList: document.getElementById('suggested-users-list'),
@@ -219,11 +218,6 @@ function updateAuthUI() {
       DOM.navProfileBtn.onclick = () => { window.location.hash = `#profile/${user.username}`; };
     }
 
-    // Right Sidebar: Hide Demo Accounts Box when user is logged in!
-    if (DOM.demoAccountsCard) {
-      DOM.demoAccountsCard.style.display = 'none';
-    }
-
     // Right Sidebar: Show My Profile Widget with instant edit photo option
     if (DOM.myProfileWidget && DOM.myProfileWidgetContent) {
       DOM.myProfileWidget.style.display = 'block';
@@ -256,10 +250,6 @@ function updateAuthUI() {
       DOM.navProfileBtn.style.display = 'none';
     }
 
-    // Right Sidebar: Show Demo Accounts Box when logged out
-    if (DOM.demoAccountsCard) {
-      DOM.demoAccountsCard.style.display = 'block';
-    }
     if (DOM.myProfileWidget) {
       DOM.myProfileWidget.style.display = 'none';
     }
