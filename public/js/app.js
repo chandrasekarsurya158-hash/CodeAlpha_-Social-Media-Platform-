@@ -265,7 +265,7 @@ function handleHashNavigation() {
 
   if (hash.startsWith('profile/')) {
     document.getElementById('mobile-nav-profile-btn')?.classList.add('active');
-    const username = hash.split('/')[1];
+    const username = decodeURIComponent(hash.split('/')[1] || '');
     loadUserProfile(username);
   } else if (hash === 'reels') {
     document.getElementById('mobile-nav-reels-btn')?.classList.add('active');
@@ -324,6 +324,9 @@ function switchTab(tab) {
 
   DOM.navReelsBtn?.classList.remove('active');
 
+  // Always reset postsList pointer to the active feed container
+  DOM.postsList = document.querySelector('#feed-container #posts-list');
+
   if (tab === 'all') {
     DOM.tabAll.classList.add('active');
     DOM.tabFollowing.classList.remove('active');
@@ -341,9 +344,20 @@ function switchTab(tab) {
   loadPosts();
 }
 
+// Helper: always get the active posts container based on current view
+function getActivePostsList() {
+  if (State.currentView === 'profile') {
+    return document.getElementById('profile-posts-list') || document.querySelector('#profile-container .post-list');
+  }
+  return document.querySelector('#feed-container #posts-list') || document.getElementById('posts-list');
+}
+
 // Load Posts Feed
 async function loadPosts() {
-  DOM.postsList.innerHTML = `
+  const container = getActivePostsList();
+  if (!container) return;
+
+  container.innerHTML = `
     <div style="text-align:center; padding: 2.5rem 0;">
       <div class="loading-spinner"></div>
       <p style="color:var(--text-muted); font-size:0.875rem; margin-top:0.5rem;">Loading posts...</p>
@@ -360,25 +374,31 @@ async function loadPosts() {
     State.posts = data.posts;
     renderPosts(data.posts);
   } catch (err) {
-    DOM.postsList.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">⚠️</div>
-        <div class="empty-state-title">Unable to load posts</div>
-        <p class="empty-state-desc">${escapeHtml(err.message)}</p>
-        <button class="btn btn-secondary btn-sm" style="margin-top:1rem;" onclick="loadPosts()">Try Again</button>
-      </div>
-    `;
+    const currentContainer = getActivePostsList();
+    if (currentContainer) {
+      currentContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">Unable to load posts</div>
+          <p class="empty-state-desc">${escapeHtml(err.message)}</p>
+          <button class="btn btn-secondary btn-sm" style="margin-top:1rem;" onclick="loadPosts()">Try Again</button>
+        </div>
+      `;
+    }
   }
 }
 
 // Render Posts to DOM
 function renderPosts(posts) {
+  const container = getActivePostsList();
+  if (!container) return;
+
   if (!posts || posts.length === 0) {
     const emptyMessage = State.currentTab === 'following'
       ? 'No posts from people you follow yet. Follow more users or switch to "All Posts"!'
       : 'No posts to display yet. Be the first to share something!';
 
-    DOM.postsList.innerHTML = `
+    container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">💬</div>
         <div class="empty-state-title">No Posts Found</div>
@@ -388,7 +408,7 @@ function renderPosts(posts) {
     return;
   }
 
-  DOM.postsList.innerHTML = posts.map(post => renderPostCardHtml(post)).join('');
+  container.innerHTML = posts.map(post => renderPostCardHtml(post)).join('');
 }
 
 // YouTube video ID extractor
@@ -677,7 +697,8 @@ async function handleDeletePost(postId) {
       postEl.style.transform = 'translateY(-10px)';
       setTimeout(() => {
         postEl.remove();
-        if (DOM.postsList.children.length === 0) {
+        const currentContainer = getActivePostsList();
+        if (currentContainer && currentContainer.children.length === 0) {
           renderPosts([]);
         }
       }, 300);
@@ -726,10 +747,13 @@ async function handleCreatePost(e) {
     DOM.mediaDrawer.classList.remove('open');
 
     // Prepend new post to feed
-    if (DOM.postsList.querySelector('.empty-state')) {
-      DOM.postsList.innerHTML = '';
+    const container = getActivePostsList();
+    if (container) {
+      if (container.querySelector('.empty-state')) {
+        container.innerHTML = '';
+      }
+      container.insertAdjacentHTML('afterbegin', renderPostCardHtml(result.post));
     }
-    DOM.postsList.insertAdjacentHTML('afterbegin', renderPostCardHtml(result.post));
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -825,11 +849,8 @@ function renderProfileHeader(profile) {
     <div style="margin-bottom:1rem; font-weight:700; font-size:1rem; color:var(--text-main);">
       Posts by @${escapeHtml(profile.username)}
     </div>
-    <div id="posts-list" class="post-list"></div>
+    <div id="profile-posts-list" class="post-list"></div>
   `;
-
-  // Re-bind DOM.postsList
-  DOM.postsList = document.getElementById('posts-list');
 }
 
 // Follow / Unfollow Toggle
@@ -950,7 +971,15 @@ async function handleLogin(e) {
     updateAuthUI();
     closeAuthModal();
     showToast(`Welcome back, @${data.user.username}!`, 'success');
-    loadPosts();
+
+    // Dynamically refresh active view
+    if (State.currentView === 'reels') {
+      loadReels();
+    } else if (State.currentView === 'profile' && State.profileUsername) {
+      loadUserProfile(State.profileUsername);
+    } else {
+      switchTab('all');
+    }
     loadSuggestedUsers();
   } catch (err) {
     showToast(err.message, 'error');
@@ -993,10 +1022,14 @@ async function handleLogout() {
   State.currentUser = null;
   updateAuthUI();
   showToast('Logged out successfully.', 'info');
-  if (window.location.hash.startsWith('#profile/')) {
-    window.location.hash = 'feed';
+
+  if (State.currentView === 'reels') {
+    loadReels();
+  } else if (State.currentView === 'profile' && State.profileUsername) {
+    loadUserProfile(State.profileUsername);
   } else {
-    loadPosts();
+    window.location.hash = 'feed';
+    switchTab('all');
   }
   loadSuggestedUsers();
 }

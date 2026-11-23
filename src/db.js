@@ -46,9 +46,16 @@ function restoreFromSnapshot() {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
+    const updateUser = db.prepare(`
+      UPDATE users SET bio = COALESCE(NULLIF(?, ''), bio), avatar_url = COALESCE(NULLIF(?, ''), avatar_url)
+      WHERE LOWER(username) = LOWER(?)
+    `);
+
     snapshot.users.forEach(u => {
       if (!existingUsers.has(u.username.toLowerCase())) {
         insertUser.run(u.id, u.username, u.email, u.password_hash, u.bio || '', u.avatar_url || '', u.created_at || new Date().toISOString());
+      } else if (u.avatar_url || u.bio) {
+        updateUser.run(u.bio || '', u.avatar_url || '', u.username);
       }
     });
 

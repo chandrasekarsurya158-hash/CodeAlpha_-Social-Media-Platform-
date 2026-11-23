@@ -114,10 +114,19 @@ router.post('/login', async (req, res) => {
       sameSite: 'lax'
     });
 
+    const fullUser = db.prepare(`
+      SELECT u.id, u.username, u.email, u.bio, u.avatar_url, u.created_at,
+        (SELECT COUNT(*) FROM followers WHERE following_id = u.id) as follower_count,
+        (SELECT COUNT(*) FROM followers WHERE follower_id = u.id) as following_count,
+        (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as post_count
+      FROM users u
+      WHERE u.id = ?
+    `).get(user.id);
+
     return res.json({
       message: 'Logged in successfully!',
       token,
-      user: sanitizeUser(user)
+      user: fullUser
     });
   } catch (err) {
     console.error('Login error:', err);
