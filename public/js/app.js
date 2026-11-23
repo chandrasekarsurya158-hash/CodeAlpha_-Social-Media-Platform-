@@ -166,12 +166,23 @@ function renderAvatar(url, username, sizeClass = '') {
 async function initApp() {
   bindEvents();
   
-  // Check active user session
+  // 1. Immediately show cached user session from localStorage so there's zero flicker or false logout
+  const cachedUser = API.getCurrentUser();
+  if (cachedUser) {
+    State.currentUser = cachedUser;
+    updateAuthUI();
+  }
+
+  // 2. Refresh / validate session with server in background
   try {
     const user = await API.getMe();
-    State.currentUser = user;
+    if (user) {
+      State.currentUser = user;
+    } else if (!cachedUser) {
+      State.currentUser = null;
+    }
   } catch (err) {
-    State.currentUser = null;
+    // Keep cached user on network dip or server cold-start
   }
 
   updateAuthUI();
@@ -973,7 +984,17 @@ async function handleRegister(e) {
     loadPosts();
     loadSuggestedUsers();
   } catch (err) {
-    showToast(err.message, 'error');
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('already exists') || msg.includes('taken') || msg.includes('user_exists')) {
+      showToast(`${err.message} Switching to Log In...`, 'info');
+      switchAuthTab('login');
+      const loginId = document.getElementById('login-identifier');
+      if (loginId) loginId.value = username;
+      const loginPwd = document.getElementById('login-password');
+      if (loginPwd) loginPwd.focus();
+    } else {
+      showToast(err.message, 'error');
+    }
   }
 }
 
@@ -1049,6 +1070,39 @@ function generateRandomAvatar() {
   showToast('Generated random avatar! Click Save Changes to apply.', 'info');
 }
 
+// Helper: Compress an image file to a lightweight Base64 data URL for permanent storage
+function compressAvatarFile(file, maxWidth = 360, maxHeight = 360, quality = 0.85) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(null);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve(e.target.result);
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleAvatarFileUpload(file) {
   if (!file) return;
 
@@ -1064,23 +1118,39 @@ async function handleAvatarFileUpload(file) {
 
   try {
     if (DOM.avatarUploadStatus) {
-      DOM.avatarUploadStatus.innerText = `Uploading photo...`;
+      DOM.avatarUploadStatus.innerText = `Processing photo...`;
       DOM.avatarUploadStatus.style.color = 'var(--primary)';
       DOM.avatarUploadStatus.style.display = 'block';
     }
 
-    const data = await API.uploadFile(file);
-    State.tempAvatarUrl = data.url;
-    if (DOM.editAvatarInput) DOM.editAvatarInput.value = data.url;
-    updateEditAvatarPreview(data.url);
+    // 1. Generate lightweight Base64 Data URL (guarantees photo is NEVER lost across server restarts or cloud resets)
+    const base64Url = await compressAvatarFile(file);
+    if (base64Url) {
+      State.tempAvatarUrl = base64Url;
+      if (DOM.editAvatarInput) DOM.editAvatarInput.value = base64Url;
+      updateEditAvatarPreview(base64Url);
+    }
+
+    // 2. Also attempt upload to server
+    try {
+      const data = await API.uploadFile(file);
+      // Prefer base64 for indestructible persistence in DB, or server URL if base64 failed
+      if (!base64Url) {
+        State.tempAvatarUrl = data.url;
+        if (DOM.editAvatarInput) DOM.editAvatarInput.value = data.url;
+        updateEditAvatarPreview(data.url);
+      }
+    } catch (uploadErr) {
+      console.warn('Upload API fallback to Base64:', uploadErr.message);
+    }
 
     if (DOM.avatarUploadStatus) {
-      DOM.avatarUploadStatus.innerText = `Photo uploaded! Click "Save Changes" below.`;
+      DOM.avatarUploadStatus.innerText = `Photo ready! Click "Save Changes" below.`;
       DOM.avatarUploadStatus.style.color = '#10b981';
       DOM.avatarUploadStatus.style.display = 'block';
     }
 
-    showToast('Photo uploaded successfully! Click Save Changes to apply.', 'success');
+    showToast('Photo uploaded! Click "Save Changes" to apply.', 'success');
   } catch (err) {
     showToast(`Upload failed: ${err.message}`, 'error');
     if (DOM.avatarUploadStatus) {

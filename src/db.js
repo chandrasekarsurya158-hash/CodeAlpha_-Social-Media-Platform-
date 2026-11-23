@@ -1,12 +1,106 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
 const dbPath = path.join(__dirname, '..', 'database.sqlite');
+const snapshotPath = path.join(__dirname, 'data_snapshot.json');
 const db = new Database(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
+
+function saveDataSnapshot() {
+  try {
+    const users = db.prepare('SELECT id, username, email, password_hash, bio, avatar_url, created_at FROM users').all();
+    const posts = db.prepare('SELECT id, user_id, content, image_url, media_type, is_reel, audio_track, audio_url, created_at FROM posts').all();
+    const comments = db.prepare('SELECT id, post_id, user_id, content, created_at FROM comments').all();
+    const likes = db.prepare('SELECT id, user_id, post_id, created_at FROM likes').all();
+    const followers = db.prepare('SELECT id, follower_id, following_id, created_at FROM followers').all();
+
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      users,
+      posts,
+      comments,
+      likes,
+      followers
+    };
+
+    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to save data snapshot:', err.message);
+  }
+}
+
+function restoreFromSnapshot() {
+  if (!fs.existsSync(snapshotPath)) return;
+  try {
+    const raw = fs.readFileSync(snapshotPath, 'utf8');
+    const snapshot = JSON.parse(raw);
+    if (!snapshot || !Array.isArray(snapshot.users)) return;
+
+    const existingUsers = new Set(db.prepare('SELECT username FROM users').all().map(u => u.username.toLowerCase()));
+    const insertUser = db.prepare(`
+      INSERT OR IGNORE INTO users (id, username, email, password_hash, bio, avatar_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    snapshot.users.forEach(u => {
+      if (!existingUsers.has(u.username.toLowerCase())) {
+        insertUser.run(u.id, u.username, u.email, u.password_hash, u.bio || '', u.avatar_url || '', u.created_at || new Date().toISOString());
+      }
+    });
+
+    const existingPosts = new Set(db.prepare('SELECT id FROM posts').all().map(p => p.id));
+    const insertPost = db.prepare(`
+      INSERT OR IGNORE INTO posts (id, user_id, content, image_url, media_type, is_reel, audio_track, audio_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    if (Array.isArray(snapshot.posts)) {
+      snapshot.posts.forEach(p => {
+        if (!existingPosts.has(p.id)) {
+          insertPost.run(p.id, p.user_id, p.content, p.image_url, p.media_type || 'image', p.is_reel ? 1 : 0, p.audio_track || 'Original Audio', p.audio_url || null, p.created_at || new Date().toISOString());
+        }
+      });
+    }
+
+    if (Array.isArray(snapshot.comments)) {
+      const insertComment = db.prepare(`
+        INSERT OR IGNORE INTO comments (id, post_id, user_id, content, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      snapshot.comments.forEach(c => {
+        insertComment.run(c.id, c.post_id, c.user_id, c.content, c.created_at || new Date().toISOString());
+      });
+    }
+
+    if (Array.isArray(snapshot.likes)) {
+      const insertLike = db.prepare(`
+        INSERT OR IGNORE INTO likes (id, user_id, post_id, created_at)
+        VALUES (?, ?, ?, ?)
+      `);
+      snapshot.likes.forEach(l => {
+        insertLike.run(l.id, l.user_id, l.post_id, l.created_at || new Date().toISOString());
+      });
+    }
+
+    if (Array.isArray(snapshot.followers)) {
+      const insertFollow = db.prepare(`
+        INSERT OR IGNORE INTO followers (id, follower_id, following_id, created_at)
+        VALUES (?, ?, ?, ?)
+      `);
+      snapshot.followers.forEach(f => {
+        insertFollow.run(f.id, f.follower_id, f.following_id, f.created_at || new Date().toISOString());
+      });
+    }
+
+    console.log('Restored data snapshot successfully.');
+  } catch (err) {
+    console.error('Failed to restore data snapshot:', err.message);
+  }
+}
 
 function initDb() {
   db.exec(`
@@ -150,6 +244,8 @@ function initDb() {
   }
 
   seedDatabase();
+  restoreFromSnapshot();
+  saveDataSnapshot();
 }
 
 function seedDatabase() {
@@ -281,5 +377,6 @@ function seedDatabase() {
 
 module.exports = {
   db,
-  initDb
+  initDb,
+  saveDataSnapshot
 };

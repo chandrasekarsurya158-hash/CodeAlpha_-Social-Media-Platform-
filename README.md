@@ -35,9 +35,12 @@ A full-stack, responsive Mini Social Media Platform built with **Vanilla HTML5/C
    - Follow/unfollow toggle button on user profiles and in the "Who to Follow" recommendations card.
    - Filter feed between **All Posts** and **Following** (posts only from people you follow plus yourself).
 
-4. **Zero-Config Database**:
+4. **Zero-Config Database & Open-Source Persistence**:
    - SQLite embedded database (`database.sqlite`) initialized automatically on startup.
    - Automatic seeding of sample users (`alex_tech`, `sarah_design`, `marcus_lens`), sample posts, comments, likes, and follow relationships.
+   - **Data Snapshot Persistence (`src/data_snapshot.json`)**: All accounts, posts, comments, and profile photos are continuously snapshotted to JSON. When deployed to cloud platforms (Render, Railway, Fly.io) or cloned, user accounts and photos are seamlessly restored on server startup.
+   - **Indestructible Profile Photos**: Profile avatars use optimized lightweight Base64 storage, ensuring they never 404 or get erased by ephemeral cloud disks.
+   - **Persistent 1-Year Sessions**: Resilient client token caching ensures users remain logged into their accounts even after network dips, server reboots, or sleep.
 
 ---
 

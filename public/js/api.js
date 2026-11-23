@@ -91,14 +91,23 @@ const API = {
   },
 
   async getMe() {
+    const token = this.getToken();
+    if (!token) return null;
+
     try {
       const data = await this.request('/api/auth/me');
       this.setCurrentUser(data.user);
       return data.user;
     } catch (err) {
-      this.setToken(null);
-      this.setCurrentUser(null);
-      return null;
+      const msg = (err.message || '').toLowerCase();
+      // Only discard the session if the token was explicitly rejected by the server
+      if (msg.includes('401') || msg.includes('invalid') || msg.includes('expired') || msg.includes('user not found')) {
+        this.setToken(null);
+        this.setCurrentUser(null);
+        return null;
+      }
+      // On network errors or server starting up, keep existing cached user
+      return this.getCurrentUser();
     }
   },
 

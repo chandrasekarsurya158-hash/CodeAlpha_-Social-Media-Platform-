@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../db');
+const { db, saveDataSnapshot } = require('../db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -175,6 +175,9 @@ router.post('/', requireAuth, (req, res) => {
       }
     };
 
+    // Save snapshot so newly created post/reel persists across restarts
+    saveDataSnapshot();
+
     return res.status(201).json({
       message: finalIsReel ? 'Reel published successfully!' : 'Post created successfully!',
       post: newPost
@@ -203,6 +206,7 @@ router.delete('/:id', requireAuth, (req, res) => {
     }
 
     db.prepare('DELETE FROM posts WHERE id = ?').run(postId);
+    saveDataSnapshot();
 
     return res.json({ message: 'Post deleted successfully.' });
   } catch (err) {
@@ -312,6 +316,7 @@ router.post('/:id/comments', requireAuth, (req, res) => {
 
     const user = db.prepare('SELECT id, username, avatar_url FROM users WHERE id = ?').get(req.user.id);
     const commentCount = db.prepare('SELECT COUNT(*) as count FROM comments WHERE post_id = ?').get(postId).count;
+    saveDataSnapshot();
 
     const newComment = {
       id: insertResult.lastInsertRowid,

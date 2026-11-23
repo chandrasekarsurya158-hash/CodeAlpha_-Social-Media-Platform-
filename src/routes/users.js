@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('../db');
+const { db, saveDataSnapshot } = require('../db');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -85,6 +85,9 @@ router.put('/profile', requireAuth, (req, res) => {
         (SELECT COUNT(*) FROM posts WHERE user_id = users.id) as post_count
       FROM users WHERE id = ?
     `).get(currentUserId);
+
+    // Save snapshot so profile updates persist across restarts
+    saveDataSnapshot();
 
     return res.json({
       message: 'Profile updated successfully!',

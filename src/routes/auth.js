@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db } = require('../db');
+const { db, saveDataSnapshot } = require('../db');
 const { requireAuth, signToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -43,9 +43,9 @@ router.post('/register', async (req, res) => {
     const existing = db.prepare('SELECT id, username, email FROM users WHERE username = ? OR email = ?').get(trimmedUsername, trimmedEmail);
     if (existing) {
       if (existing.username.toLowerCase() === trimmedUsername) {
-        return res.status(409).json({ error: 'Username is already taken.' });
+        return res.status(409).json({ error: 'Username is already taken. If this is your account, please log in.', code: 'USER_EXISTS' });
       }
-      return res.status(409).json({ error: 'Email is already registered.' });
+      return res.status(409).json({ error: 'Email is already registered. Please log in with your password.', code: 'USER_EXISTS' });
     }
 
     const passwordHash = bcrypt.hashSync(password, 10);
@@ -61,9 +61,12 @@ router.post('/register', async (req, res) => {
     const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     const token = signToken(newUser);
 
+    // Save snapshot so newly registered user persists across server restarts
+    saveDataSnapshot();
+
     res.cookie('token', token, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
       sameSite: 'lax'
     });
 
@@ -107,7 +110,7 @@ router.post('/login', async (req, res) => {
 
     res.cookie('token', token, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
       sameSite: 'lax'
     });
 
